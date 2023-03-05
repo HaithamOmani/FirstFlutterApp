@@ -1,13 +1,23 @@
+import 'dart:convert';
+import 'dart:developer';
+import 'dart:math';
+
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:dio/dio.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_flutter/app_style.dart';
 import 'package:learning_flutter/components/appLocale.dart';
 import 'package:learning_flutter/models/user.dart';
+import 'package:learning_flutter/models/profit.dart';
 import 'package:learning_flutter/providers/auth.dart';
 import 'package:learning_flutter/size_config.dart';
 import 'package:learning_flutter/widgets/nav-drawer.dart';
 import 'package:provider/provider.dart';
+
+import 'models/announcement.dart';
 
 void main() {
   // const MyApp()
@@ -15,7 +25,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,7 +34,6 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        // home: const MyHomePage(title: 'Al Waseet'),
         home: FutureBuilder(
           future: Future.delayed(Duration(seconds: 3)),
           builder: (context, AsyncSnapshot snapshot) {
@@ -35,7 +44,6 @@ class MyApp extends StatelessWidget {
             }
           },
         ),
-        // ignore: prefer_const_literals_to_create_immutables
         localizationsDelegates: [
           AppLocale.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -70,41 +78,30 @@ class _MyHomePageState extends State<MyHomePage> {
     Provider.of<Auth>(context, listen: false).attempt(key!);
   }
 
-  String greeting(String name) {
-    var hour = DateTime.now().hour;
-    if (hour < 12) {
-      var auth;
-      return 'Good Morning ${name}';
-    }
-    if (hour < 17) {
-      return 'Afternoon $name';
-    }
-    return 'Evening $name';
-  }
-
+  late Future<List<dynamic>> _futureProfits;
+  List<PieChartSectionData> _chartData = [];
   @override
   void initState() {
     _attemptAuthentication();
     super.initState();
   }
 
+  String greeting(String name) {
+    name = name.split(" ")[0];
+
+    var hour = DateTime.now().hour;
+    if (hour < 12) {
+      var auth;
+      return 'Good Morning ${name}';
+    }
+    if (hour < 17) {
+      return 'Good Afternoon $name';
+    }
+    return 'Good Evening $name';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // return SafeArea(
-    //   child: SingleChildScrollView(
-    //     padding: EdgeInsets.symmetric(horizontal: kPaddingHorizontal),
-    //     child: Column(
-    //       children: [
-    //         Row(
-    //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    //           children: [
-    //             Text('Here we go'),
-    //           ],
-    //         ),
-    //       ],
-    //     ),
-    //   ),
-    // );
     return Scaffold(
       key: _scaffoldKey,
       // appBar: AppBar(
@@ -141,7 +138,79 @@ class _MyHomePageState extends State<MyHomePage> {
                     )
                   ],
                 ),
-                Text('abcabcabcabcabcabc')
+                Positioned(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Container(
+                      padding: EdgeInsets.only(top: 30, bottom: 20),
+                      child: Text(
+                        '',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ),
+                ),
+                FutureBuilder(
+                  future: fetchAnnouncements(),
+                  builder: (BuildContext context,
+                      AsyncSnapshot<List<Announcement>> snapshot) {
+                    if (snapshot.hasError) {
+                      // Display an error message if the future throws an error
+                      return Center(
+                          child: Text(
+                              'An error occurred while fetching announcements'));
+                    } else if (snapshot.hasData) {
+                      return CarouselSlider.builder(
+                        itemCount: snapshot.data!.length,
+                        itemBuilder:
+                            (BuildContext context, int index, int realIndex) {
+                          final announcement = snapshot.data![index];
+                          return Container(
+                            width: 200,
+                            height: 10,
+                            padding: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              border: Border.all(width: 1, color: Colors.grey),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            // decoration: BoxDecoration(
+                            //   border: Border.all(width: 1, color: Colors.grey),
+                            //   borderRadius: BorderRadius.circular(10),
+                            // ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  announcement.content,
+                                  style: TextStyle(
+                                      letterSpacing: 0.5,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Text(
+                                    announcement.date,
+                                    style: TextStyle(fontSize: 9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        options: CarouselOptions(
+                          autoPlay: true,
+                          enlargeCenterPage: true,
+                          aspectRatio: 16 / 9,
+                        ),
+                      );
+                    } else {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                  },
+                ),
+                Text('abc')
               ],
             );
           }),
@@ -168,11 +237,43 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: Colors.blue, // set the background color here
+        color: Colors.white, // set the background color here
         child: Center(
           child: Image.asset('assets/images/logo.png'),
         ),
       ),
     );
+  }
+}
+
+Future<List<Announcement>> fetchAnnouncements() async {
+  try {
+    var response =
+        await Dio().get('https://more-sides.com/api/User/GetAnnouncements');
+    Map<String, dynamic> data = response.data;
+    List<dynamic> announcementData = data['announcements'];
+    List<Announcement> announcements = [];
+    for (var item in announcementData) {
+      announcements.add(Announcement(
+          id: item['id'], date: item['date'], content: item['content']));
+    }
+    return announcements;
+  } catch (error) {
+    print(error);
+    return [];
+  }
+}
+
+List<Profit> parseProfits(String responseBody) {
+  final parsed = jsonDecode(responseBody).cast<Map<String, dynamic>>();
+  return parsed.map<Profit>((json) => Profit.fromJson(json)).toList();
+}
+
+Future<List<Profit>> fetchProfits() async {
+  final response = await Dio().get('https://more-sides.com/api/User/Profits/6');
+  if (response.statusCode == 200) {
+    return parseProfits(response.data);
+  } else {
+    throw Exception('Failed to load profits');
   }
 }
