@@ -2,7 +2,10 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:learning_flutter/providers/auth.dart';
+import 'package:learning_flutter/screens/main-screen.dart';
 import 'package:provider/provider.dart';
+
+import '../widgets/my_app_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -20,7 +23,12 @@ class LoginState extends State<LoginScreen> {
       'email': _email,
       'password': _password,
     });
-    Navigator.pop(context);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MainMenuScreen()),
+    );
+    // Navigator.pop(context);
     // log(_email);
     // log(_password);
   }
@@ -28,8 +36,9 @@ class LoginState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Login'),
+      appBar: MyAppBar(
+        title: Text("login"),
+        context: context,
       ),
       body: Form(
         key: _formKey,

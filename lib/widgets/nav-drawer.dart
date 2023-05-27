@@ -4,6 +4,7 @@ import 'package:learning_flutter/screens/posts-screen.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth.dart';
+import '../screens/settings-screen.dart';
 
 class NavDrawer extends StatelessWidget {
   @override
@@ -20,6 +21,15 @@ class NavDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context,
                         MaterialPageRoute(builder: (context) => PostsScreen()));
+                  },
+                ),
+                ListTile(
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => SettingsScreen()));
                   },
                 ),
                 ListTile(

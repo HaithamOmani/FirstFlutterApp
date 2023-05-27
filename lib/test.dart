@@ -2,9 +2,11 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:learning_flutter/components/appLocale.dart';
+import 'package:learning_flutter/locale/locale_controller.dart';
 import 'package:learning_flutter/models/service.dart';
 import 'package:learning_flutter/providers/auth.dart';
 import 'package:learning_flutter/screens/login-screen.dart';
@@ -15,34 +17,14 @@ import 'package:dio/dio.dart' as Dio;
 import 'package:learning_flutter/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'locale/MyLocaleHelper.dart';
-import 'locale/locale_controller.dart';
-import 'models/post.dart';
-import 'models/user.dart';
+import 'locale/locale.dart';
 
-late SharedPreferences sharedpref;
-
-Future<void> initSharedPreferences() async {
-  sharedpref = await SharedPreferences.getInstance();
-}
+late SharedPreferences shaedpref;
 
 Future<void> main() async {
-  // const MyApp()
   WidgetsFlutterBinding.ensureInitialized();
-  await initSharedPreferences();
-  sharedpref = await SharedPreferences.getInstance();
-
+  shaedpref = await SharedPreferences.getInstance();
   runApp(ChangeNotifierProvider(create: (_) => Auth(), child: const MyApp()));
-}
-
-Future<void> _attemptAuthentication(context) async {
-  final storage = new FlutterSecureStorage();
-  final key = await storage.read(key: 'auth');
-  if (key != null && key.isNotEmpty) {
-    Provider.of<Auth>(context, listen: false).attempt(key);
-  } else {
-    Provider.of<Auth>(context, listen: false).logout();
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -50,55 +32,57 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Get.put(MyLocaleController());
-    MyLocaleController controller = MyLocaleHelper.getLocaleController();
+    MyLocaleController controller = Get.put(MyLocaleController());
 
-    return MaterialApp(
+    return ScreenUtilInit(
+      designSize: const Size(360, 740),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Al Waseet App',
+        locale: shaedpref.getString("curruntLang") == null
+            ? Get.deviceLocale
+            : Locale(shaedpref.getString("curruntLang")!),
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
         home: FutureBuilder(
-          future: _attemptAuthentication(context),
+          future: Future.delayed(Duration(seconds: 3)),
           builder: (context, AsyncSnapshot snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return SplashScreen();
             } else {
-              // log(sharedpref.getString("curruntLang").toString());
+              // return new MainMenuScreen();
+              // return const MyHomePage(title: 'Al Waseet');
+
+              // var isLoggedIn = shaedpref.getString('authenticated').toString();
+              // log('Is Logged: ' + isLoggedIn.toString());
               return Consumer<Auth>(
                 builder: (context, auth, child) {
-                  // log('Auth: ' + auth.authenticated.toString());
-                  if (auth.authenticated) {
+                  log('Auth: ' + auth.authenticated.toString());
+                  if (auth.authenticated == 'true') {
                     return MainMenuScreen();
                   } else {
                     return LoginScreen();
                   }
-                  // return MyHomePage(title: 'Al Waseet');
                 },
               );
             }
           },
         ),
+        // ignore: prefer_const_literals_to_create_immutables
         localizationsDelegates: [
-          AppLocale.delegate,
+          GlobalWidgetsLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate
         ],
-        supportedLocales: const [Locale("en", ""), Locale("ar", "")],
-        locale: sharedpref.getString("curruntLang") == null
-            ? Get.deviceLocale
-            : Locale(sharedpref.getString("curruntLang")!),
-        localeResolutionCallback: (currentLang, supportLang) {
-          for (Locale locale in supportLang) {
-            if (locale.languageCode == currentLang!.languageCode) {
-              return currentLang;
-            }
-          }
-          return supportLang.first;
-        });
+        translations: MyLocale(),
+      ),
+    );
   }
 }
+
+// the rest of your code...
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -126,7 +110,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     _attemptAuthentication();
     getServices();
-    initSharedPreferences();
     super.initState();
   }
 

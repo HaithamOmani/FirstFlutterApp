@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart' as Dio;
 import 'package:flutter/material.dart';
 import 'package:learning_flutter/dio.dart';
+import 'package:learning_flutter/main.dart';
 import 'package:learning_flutter/models/post.dart';
+
+import '../widgets/my_app_bar.dart';
 
 class PostsScreen extends StatefulWidget {
   @override
@@ -24,26 +27,28 @@ class PostsState extends State<PostsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Posts'),
+      appBar: MyAppBar(
+        title: Text("posts"),
+        context: context,
       ),
       body: Center(
         child: FutureBuilder<List<Post>>(
-            future: getPosts(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return ListView.builder(
-                    itemCount: snapshot.data?.length,
-                    itemBuilder: (context, index) {
-                      var item = snapshot.data![index];
-                      return ListTile(title: Text(item.title));
-                    });
-              } else if (snapshot.hasError) {
-                return const Text('Failed to load posts');
-              }
+          future: getPosts(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return ListView.builder(
+                  itemCount: snapshot.data?.length,
+                  itemBuilder: (context, index) {
+                    var item = snapshot.data![index];
+                    return ListTile(title: Text(item.title));
+                  });
+            } else if (snapshot.hasError) {
+              return const Text('Failed to load posts');
+            }
 
-              return const CircularProgressIndicator();
-            }),
+            return const CircularProgressIndicator();
+          },
+        ),
       ),
     );
   }

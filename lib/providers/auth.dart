@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_flutter/models/user.dart';
 import 'package:platform_device_id/platform_device_id.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../dio.dart';
 
@@ -15,6 +16,8 @@ class Auth extends ChangeNotifier {
   late User _user;
   bool get authenticated => _authenticated;
   User get user => _user;
+  Locale _locale = Locale('en');
+  Locale get locale => _locale;
 
   Future login({required Map credentials}) async {
     String deviceId = await getDeviceId();
@@ -32,6 +35,8 @@ class Auth extends ChangeNotifier {
           options: Dio.Options(headers: {'Authorization': 'Bearer $token'}));
       _user = User.fromJson(json.decode(response.toString()));
       _authenticated = true;
+      // final prefs = await SharedPreferences.getInstance();
+      // prefs.setString('authenticated', 'true');
     } catch (e) {
       // log(e.toString());
       _authenticated = false;
@@ -68,6 +73,11 @@ class Auth extends ChangeNotifier {
         options: Dio.Options(headers: {'auth': true}));
 
     await deleteToken();
+    notifyListeners();
+  }
+
+  void setLocale(String localeCode) {
+    _locale = Locale(localeCode);
     notifyListeners();
   }
 }
